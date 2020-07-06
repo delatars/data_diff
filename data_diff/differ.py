@@ -82,6 +82,6 @@ class Differ:
             except MergeError:
                 continue
 
-# filediff = Differ(Excell("../data.xlsx"), Gsheet("data2"))
-# filediff.auto_differences()
-#
+
+if __name__ == '__main__':
+    pass
