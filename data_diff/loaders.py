@@ -1,15 +1,17 @@
 import pandas
 import gspread
+import shutil
 from urllib.parse import urlparse
 from pathlib import Path
 from data_diff.bases import BaseLoader, BaseGroupLoaders
 
 
-__ALL__ = ("DetermineLoader", "Excell", "Gsheet",)
+__ALL__ = ("DetermineLoader", )
 
 
 class Excell(BaseLoader):
 
+    name = "Excell"
     schemes = (".xls", ".xlsx")
     uri_example = "file://file{scheme} or ~/file{scheme}"
 
@@ -21,7 +23,9 @@ class Excell(BaseLoader):
 
     def __next__(self):
         self.current_page = next(self._current_page)
-        return self.excel.parse(self.current_page)
+        dataframe = self.excel.parse(self.current_page)
+        dataframe = dataframe.astype("object")
+        return dataframe
 
     def delete(self, dataframe):
         raise NotImplementedError
@@ -35,19 +39,53 @@ class Excell(BaseLoader):
 
 class Gsheet(BaseLoader):
 
+    name = "Google Sheet"
     schemes = ("docs.google.com",)
     uri_example = "https://{scheme}/spreadsheet/ccc?key=0Bm...FE&hl"
 
+    sa_path = Path("~/.config/gspread/service_account.json")
+    oauth_path = Path("~/.config/gspread/credentials.json")
+
     def __init__(self, url):
-        gc = gspread.oauth()
+        gc = self._auth()
         self.workbook = gc.open_by_url(url)
         self.current_page = None
         self.current_page_len = None
         self._current_page = iter(self.workbook.worksheets())
 
+    def _auth(self):
+        if self.sa_path.expanduser().exists():
+            auth = gspread.service_account()
+            return auth
+        elif self.oauth_path.expanduser().exists():
+            auth = gspread.oauth()
+            return auth
+        else:
+            path = base_path = Path("")
+            while 1:
+                choice = input(f"{self.name} choose authentication type:\n 1) oauth\n 2) system account\n$>")
+                if choice == "1":
+                    path = base_path = self.oauth_path
+                    break
+                elif choice == "2":
+                    path = base_path = self.sa_path
+                    break
+                else:
+                    print("Wrong answer: (1 or 2)?")
+                    continue
+            while 1:
+                if path.expanduser().exists():
+                    break
+                else:
+                    print(f"Can't access: {path}")
+                    path = Path(input(f"Enter path to: {base_path.name}\n$>"))
+            shutil.copy(str(path.expanduser()), str(base_path.expanduser()))
+            self._auth()
+
     def __next__(self):
         self.current_page = next(self._current_page)
         dataframe = pandas.DataFrame(self.current_page.get_all_records())
+        dataframe = dataframe.astype("object")
         self.current_page_len = len(dataframe)+1
         return dataframe
 

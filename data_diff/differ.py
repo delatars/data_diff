@@ -14,8 +14,8 @@ class Differ:
 
     def manual_differences(self):
 
-        from_l_name = self.from_loader.__class__.__name__
-        to_l_name = self.to_loader.__class__.__name__
+        from_l_name = self.from_loader.name
+        to_l_name = self.to_loader.name
 
         print(f"Differences: {from_l_name} --> {to_l_name}")
 
@@ -68,7 +68,7 @@ class Differ:
                 self.to_loader.update(append_rows)
 
     def _get_changes(self, data, merge):
-        return data[data['_merge'] == merge].drop('_merge', axis=1,)
+        return data[data['_merge'] == merge].drop('_merge', axis=1)
 
     def _get_differences(self):
         for from_l, to_l in zip(self.from_loader, self.to_loader):
