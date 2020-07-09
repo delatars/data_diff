@@ -7,3 +7,4 @@ debian/backend.*.debhelper
 debian/backend.debhelper.log
 .pybuild/
 .idea
+.pytest_cache
